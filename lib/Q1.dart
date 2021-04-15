@@ -9,15 +9,15 @@ class Q1 extends StatefulWidget {
 }
 
 class _Q1State extends State<Q1> {
-  bool isYesClicked = false;
-  bool isNoClicked = false;
   double sliderAnswer = 0;
-  String sliderText = "Not going to happen!";
+  String sliderText = "";
   bool isPlaying = true;
-  VideoPlayerController _controller;
+  VideoPlayerController _audioController;
+  VideoPlayerController _videoController;
   double audioProgress = 0;
   int questionNum = 0;
-  Future<void> _initializeVideoPlayerFuture;
+  Future<void> _initAudioPlayer;
+  Future<void> _initVideoPlayer;
 
   //calculate and return app width given current screen height. Aspect ratio 16:9
   getAppWidth(double screenHeight) {
@@ -25,12 +25,12 @@ class _Q1State extends State<Q1> {
   }
 
   updateSliderText() {
-    if (sliderAnswer < .3) {
-      sliderText = "Not going to happen!";
-    } else if (sliderAnswer >.6) {
-      sliderText = "100% for sure";
+    if (sliderAnswer <= .3) {
+      sliderText = kSliderText[questionNum][0];
+    } else if (sliderAnswer >=.7) {
+      sliderText = kSliderText[questionNum][2];
     } else {
-      sliderText = "It depends";
+      sliderText = kSliderText[questionNum][1];
     }
   }
 
@@ -51,30 +51,43 @@ class _Q1State extends State<Q1> {
     });
   }
   endAudio() {
-    _controller.pause();
+    _audioController.pause();
     audioProgress = 1;
+    setState(() {});
+  }
+  saveUserAnswer() {
+
+  }
+  resetAnswer() {
+    sliderAnswer = 0;
+    setState(() {});
   }
 
   @override
   void initState() {
-    _controller = VideoPlayerController.asset('assets/audio/${questionNum+1}.m4a');
-    _initializeVideoPlayerFuture = _controller.initialize();
-    _controller.play();
+    //Initialize to play audio using Video player package
+    _audioController = VideoPlayerController.asset('assets/audio/${questionNum+1}.m4a');
+    _initAudioPlayer = _audioController.initialize();
+    _audioController.play();
     isPlaying = true;
-    _controller.addListener(() {
-      updateAudioProgress(_controller.value.position.inSeconds.toDouble(), _controller.value.duration.inSeconds.toDouble());
-      if (_controller.value.isPlaying  == false) {
+    _audioController.addListener(() {
+      updateAudioProgress(_audioController.value.position.inSeconds.toDouble(), _audioController.value.duration.inSeconds.toDouble());
+      if (_audioController.value.isPlaying  == false) {
         setState(() {
           isPlaying = false;
         });
       }
     });
+    //Initialize to play Video using Video player package
+    _videoController = VideoPlayerController.asset('assets/video/V${questionNum+1}.mp4');
+    _initVideoPlayer = _videoController.initialize();
+    _videoController.play();
     super.initState();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _audioController.dispose();
     super.dispose();
   }
 
@@ -90,124 +103,126 @@ class _Q1State extends State<Q1> {
         ),
         title: Text("Happy Community Quest", style: kWhiteTextStyle,),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(25),
+      body: Scrollbar(
+        isAlwaysShown: true,
         child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              kSpaceBetweenElements,
-              Container(
-                constraints: BoxConstraints(
-                  maxWidth: 500,
-                  maxHeight: 500*9/16,
-                ),
-                color: Color(0xFFFAEC7E),
-                width: screenWidth-50,
-                height: (screenWidth-50)*9/16,
-              ),
-              kSpaceBetweenElements,
-              CircularProgressIndicator(
-                value: audioProgress,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-              kSpaceBetweenElements,
-              RaisedButton(
-                onPressed: (){
-                  endAudio();
-                },
-                child: Text('End audio',style: kWhiteTextStyle,),
-              ),
-              kSpaceBetweenElements,
-              AnimatedOpacity(
-                duration: Duration(seconds: 1),
-                opacity: isPlaying? 0 : 1,
-                child: Center(
-                  child: Container(
+          child: Padding(
+            padding: const EdgeInsets.all(25),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: 500,
+                    maxHeight: 500*9/16,
+                  ),
+                  child: _videoController.value.initialized
+                      ? AspectRatio(
+                    aspectRatio: _videoController.value.aspectRatio,
+                    child: VideoPlayer(_videoController),
+                  )
+                      : Container(
+                    color: Color(0xFFFAEC7E),
                     width: screenWidth-50,
-                    constraints: BoxConstraints(
-                      maxWidth: 500,
-                    ),
-                    child: Column(
+                    height: (screenWidth-50)*9/16,
+                  ),
+                ),
+                kSpaceBetweenElements,
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: 500,
+                  ),
+                  child: RaisedButton(
+                    onPressed: (){
+                      endAudio();
+                    },
+                    color: Color(0xFFFAAF01),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        RaisedButton(
-                          onPressed: (){
-                            updateCurrentQuestionNumber();
-                          },
-                          child: Text('Submit', style: kWhiteTextStyle,),
-                        ),
-                        kSpaceBetweenElements,
-                        ///Title text
-                        Text(kTitle[questionNum], textAlign: TextAlign.center, style: kWhiteTextStyle,),
-                        kSpaceBetweenElements,
-                        ///Description text
-                        Text(kDescription[questionNum], textAlign: TextAlign.center, style: kWhiteTextStyle,),
-                        kSpaceBetweenElements,
-                        ///quesstion text
-                        Center(child: Text(kQuestion[questionNum], textAlign: TextAlign.center, style: kWhiteTextStyle,)),
-                        kSpaceBetweenElements,
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            RaisedButton(
-                              onPressed: (){
-                                setState(() {
-                                  isYesClicked = !isYesClicked;
-                                  isNoClicked = !isYesClicked;
-                                });
-                              },
-                              color: isYesClicked? Color(0xffFaaf01) : Colors.white,
-                              child: Text('Yes', style: isYesClicked? kWhiteTextStyle : kBlackTextStyle,),
-                            ),
-                            kSpaceBetweenElements,
-                            RaisedButton(
-                              onPressed: (){
-                                setState(() {
-                                  isNoClicked = !isNoClicked;
-                                  isYesClicked = !isNoClicked;
-                                });
-                              },
-                              color: isNoClicked? Color(0xffFaaf01) : Colors.white,
-                              child: Text('No', style: isNoClicked? kWhiteTextStyle : kBlackTextStyle,),
-                            ),
-                          ],
-                        ),
-                        kSpaceBetweenElements,
                         Container(
-                          constraints: BoxConstraints(
-                            maxWidth: 500,
-                          ),
-                          child: Slider(
-                            value: sliderAnswer,
-                            divisions: 10,
-                            activeColor: Colors.white,
-                            inactiveColor: Colors.grey,
-                            onChanged: (newAnswer){
-                              setState(() {
-                                sliderAnswer = newAnswer;
-                                updateSliderText();
-                              });
-                            },
+                          height: 13,
+                          width: 13,
+                          child: CircularProgressIndicator(
+                            value: audioProgress,
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFAEC7E)),
+                            strokeWidth: 3.0,
                           ),
                         ),
-                        kSpaceBetweenElements,
-                        Text(sliderText, style: kWhiteTextStyle,),
-                        kSpaceBetweenElements,
-                        Container(
-                          constraints: BoxConstraints(
-                            maxWidth: 500,
-                            maxHeight: 500*9/16,
-                          ),
-                          color: Color(0xFFFAEC7E),
-                          width: screenWidth-50,
-                          height: (screenWidth-50)*9/16,
-                        ),
+                        SizedBox(width: 8,),
+                        Text('Skip audio',style: kWhiteTextStyle,),
                       ],
                     ),
                   ),
                 ),
-              ),
-            ],
+                kSpaceBetweenElements,
+                ///Description text
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: 500,
+                  ),
+                  child: Text(kDescription[questionNum], textAlign: TextAlign.center, style: TextStyle(
+                    color: Color(0xFFFAEC7E),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),),
+                ),
+                kSpaceBetweenElements,
+                AnimatedOpacity(
+                  duration: Duration(seconds: 1),
+                  opacity: isPlaying? 0 : 1,
+                  child: Center(
+                    child: Container(
+                      width: screenWidth-50,
+                      constraints: BoxConstraints(
+                        maxWidth: 500,
+                      ),
+                      child: Column(
+                        children: [
+                          ///question text
+                          Center(child: Text(kQuestion[questionNum], textAlign: TextAlign.center, style: kWhiteTextStyle,)),
+                          kSpaceBetweenElements,
+                          Container(
+                            constraints: BoxConstraints(
+                              maxWidth: 500,
+                            ),
+                            child: Slider(
+                              value: sliderAnswer,
+                              activeColor: Colors.white,
+                              inactiveColor: Color(0xFF009997),
+                              onChanged: (newAnswer){
+                                setState(() {
+                                  sliderAnswer = newAnswer;
+                                  updateSliderText();
+                                });
+                              },
+                            ),
+                          ),
+                          kSpaceBetweenElements,
+                          Text(sliderText, style: kWhiteTextStyle,),
+                          kSpaceBetweenElements,
+                          RaisedButton(
+                            onPressed: (){
+                              updateCurrentQuestionNumber();
+                            },
+                            color: Color(0xFFFAAF01),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Submit',
+                                  style: kWhiteTextStyle,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
