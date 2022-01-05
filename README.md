@@ -1,6 +1,6 @@
 # Happy Community Quest
 A training quiz flutter application
-[Demo](https://yaninatrekhleb.github.io/restaurant-website/)
+[Demo](https://hpcm-25b33.web.app/#/)
 ---
 ![](assets/demo1.png)
 ---
